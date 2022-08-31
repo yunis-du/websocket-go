@@ -2,7 +2,11 @@ syntax = "proto3";
 
 package websocket;
 
+import "gogoproto/gogo.proto";
+
 option go_package = "websocket-go/websocket";
+option (gogoproto.protosizer_all) = true;
+option (gogoproto.sizer_all) = false;
 
 enum Format {
   Json = 0;
