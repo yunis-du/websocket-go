@@ -3,12 +3,12 @@ package websocket
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/duyunzhi/websocket-go/common"
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"net/url"
 	"time"
-	"websocket-go/common"
 )
 
 type Client struct {

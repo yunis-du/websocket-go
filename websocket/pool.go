@@ -2,13 +2,13 @@ package websocket
 
 import (
 	"errors"
+	"github.com/duyunzhi/websocket-go/common"
 	"log"
 	"math/rand"
 	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
-	"websocket-go/common"
 )
 
 type SpeakerPool interface {

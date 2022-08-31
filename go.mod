@@ -1,4 +1,4 @@
-module websocket-go
+module github.com/duyunzhi/websocket-go
 
 go 1.19
 

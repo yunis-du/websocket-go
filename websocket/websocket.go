@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"errors"
+	"github.com/duyunzhi/websocket-go/common"
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"websocket-go/common"
 )
 
 const writeWait = 60 * time.Second
