@@ -3,7 +3,7 @@
 ## Installation
 
 ```bash
-go get -u  github.com/duyunzhi/websocket-go
+go get -u  github.com/yunis-du/websocket-go
 ```
 
 ## Usage
@@ -15,8 +15,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/duyunzhi/websocket-go/http"
-	"github.com/duyunzhi/websocket-go/websocket"
+	"github.com/yunis-du/websocket-go/http"
+	"github.com/yunis-du/websocket-go/websocket"
 	"os"
 )
 
@@ -63,8 +63,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/duyunzhi/websocket-go/http"
-	"github.com/duyunzhi/websocket-go/websocket"
+	"github.com/yunis-du/websocket-go/http"
+	"github.com/yunis-du/websocket-go/websocket"
 	"os"
 )
 type structEventHandler struct {
@@ -110,8 +110,8 @@ package main
 
 import (
     "fmt"
-    "github.com/duyunzhi/websocket-go/http"
-    "github.com/duyunzhi/websocket-go/websocket"
+    "github.com/yunis-du/websocket-go/http"
+    "github.com/yunis-du/websocket-go/websocket"
     "net/url"
     "os"
 )
@@ -169,8 +169,8 @@ package main
 
 import (
     "fmt"
-    "github.com/duyunzhi/websocket-go/http"
-    "github.com/duyunzhi/websocket-go/websocket"
+    "github.com/yunis-du/websocket-go/http"
+    "github.com/yunis-du/websocket-go/websocket"
     "net/url"
     "os"
 )
