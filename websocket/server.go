@@ -3,14 +3,15 @@ package websocket
 import (
 	"errors"
 	"fmt"
-	"github.com/duyunzhi/websocket-go/common"
-	htp "github.com/duyunzhi/websocket-go/http"
-	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/yunis-du/websocket-go/common"
+	htp "github.com/yunis-du/websocket-go/http"
 )
 
 const maxMessageSize = 0

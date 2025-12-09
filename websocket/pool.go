@@ -2,13 +2,12 @@ package websocket
 
 import (
 	"errors"
-	"github.com/duyunzhi/websocket-go/common"
 	"log"
 	"math/rand"
 	"reflect"
-	"sync"
-	"sync/atomic"
 	"time"
+
+	"github.com/yunis-du/websocket-go/common"
 )
 
 type SpeakerPool interface {
@@ -25,8 +24,6 @@ type SpeakerPool interface {
 type Pool struct {
 	common.RWMutex
 	name              string
-	wg                sync.WaitGroup
-	running           atomic.Value
 	eventHandlers     []SpeakerEventHandler
 	eventHandlersLock common.RWMutex
 	speakers          []Speaker

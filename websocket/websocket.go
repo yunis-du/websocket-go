@@ -2,8 +2,6 @@ package websocket
 
 import (
 	"errors"
-	"github.com/duyunzhi/websocket-go/common"
-	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"net/url"
@@ -11,6 +9,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/yunis-du/websocket-go/common"
+	"github.com/yunis-du/websocket-go/websocket/pb"
 )
 
 const writeWait = 60 * time.Second
@@ -81,11 +83,12 @@ func (s *StructSpeaker) OnMessage(c Speaker, m Message) {
 	if c, ok := c.(*StructSpeaker); ok {
 		bytes, _ := m.Bytes(RawProtocol)
 
-		var structMsg StructMessage
-		if err := structMsg.unmarshalByProtocol(bytes, c.GetClientProtocol()); err != nil {
+		pbMsg := &pb.StructMessage{}
+		if err := pbMsg.UnmarshalByProtocol(bytes, string(c.GetClientProtocol())); err != nil {
 			return
 		}
-		s.dispatchMessage(c, &structMsg)
+		structMsg := &StructMessage{StructMessage: pbMsg}
+		s.dispatchMessage(c, structMsg)
 	}
 }
 
@@ -106,6 +109,20 @@ func (s *StructSpeaker) OnDisconnected(c Speaker) {
 }
 
 func (s *StructSpeaker) dispatchMessage(c Speaker, m *StructMessage) {
+	// Check if this is a reply to a pending request
+	s.replyChanMutex.RLock()
+	if ch, ok := s.replyChan[m.UUID]; ok {
+		s.replyChanMutex.RUnlock()
+		// Send reply to waiting channel
+		select {
+		case ch <- m:
+		default:
+		}
+		return
+	}
+	s.replyChanMutex.RUnlock()
+
+	// Dispatch to registered handlers
 	s.eventHandlersLock.RLock()
 	var handlers []SpeakerStructMessageHandler
 	handlers = append(handlers, s.nsEventHandlers[m.Namespace]...)
@@ -251,8 +268,10 @@ func (c *Conn) GetStatus() ConnStatus {
 	defer c.RUnlock()
 
 	status := c.ConnStatus
-	status.State = new(ConnState)
-	return c.ConnStatus
+	state := new(ConnState)
+	*state = *c.State
+	status.State = state
+	return status
 }
 
 func (c *Conn) SendMessage(m Message) error {
@@ -271,7 +290,7 @@ func (c *Conn) SendMessage(m Message) error {
 
 func (c *Conn) SendRaw(b []byte) error {
 	if !c.IsConnected() {
-		return errors.New("Not connected")
+		return errors.New("not connected")
 	}
 
 	c.send <- b
@@ -336,7 +355,9 @@ func (c *Conn) cloneEventHandlers() (handlers []SpeakerEventHandler) {
 }
 
 func (c *Conn) write(msg []byte) error {
-	err := c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+	if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+		return err
+	}
 	c.conn.EnableWriteCompression(c.writeCompression)
 	w, err := c.conn.NextWriter(c.messageType)
 	if err != nil {
@@ -501,6 +522,7 @@ func newStructSpeaker(c Speaker) *StructSpeaker {
 	s := &StructSpeaker{
 		Speaker:         c,
 		nsEventHandlers: make(map[string][]SpeakerStructMessageHandler),
+		replyChan:       make(map[string]chan *StructMessage),
 	}
 
 	// subscribing to itself so that the StructSpeaker can get Message and can convert them

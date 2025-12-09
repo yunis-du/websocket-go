@@ -15,9 +15,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/yunis-du/websocket-go/http"
 	"github.com/yunis-du/websocket-go/websocket"
-	"os"
 )
 
 type serverEventHandler struct {
@@ -63,9 +64,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/yunis-du/websocket-go/http"
 	"github.com/yunis-du/websocket-go/websocket"
-	"os"
 )
 type structEventHandler struct {
 }
@@ -110,10 +112,11 @@ package main
 
 import (
     "fmt"
-    "github.com/yunis-du/websocket-go/http"
-    "github.com/yunis-du/websocket-go/websocket"
     "net/url"
     "os"
+
+	"github.com/yunis-du/websocket-go/http"
+    "github.com/yunis-du/websocket-go/websocket"
 )
 
 type clientEventHandler struct {
@@ -169,10 +172,11 @@ package main
 
 import (
     "fmt"
-    "github.com/yunis-du/websocket-go/http"
-    "github.com/yunis-du/websocket-go/websocket"
     "net/url"
     "os"
+
+	"github.com/yunis-du/websocket-go/http"
+    "github.com/yunis-du/websocket-go/websocket"
 )
 
 type clientStructEventHandler struct {
