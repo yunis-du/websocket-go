@@ -3,16 +3,10 @@
 ## Installation
 
 ```bash
-go get -u  github.com/yunis-du/websocket-go
+go get github.com/yunis-du/websocket-go@v1.0.2
 ```
 
 ## Usage
-
-## Installation
-
-```bash
-go get github.com/yunis-du/websocket-go@v1.0.2
-```
 
 ### create websocket server
 
