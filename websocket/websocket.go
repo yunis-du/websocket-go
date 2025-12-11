@@ -2,7 +2,6 @@ package websocket
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -230,6 +229,7 @@ type Conn struct {
 	wsSpeaker        Speaker // speaker owning the connection
 	writeCompression bool
 	messageType      int
+	Logger           Logger
 }
 
 func (s *ConnState) CompareAndSwap(old, new ServiceState) bool {
@@ -406,7 +406,7 @@ func (c *Conn) run() {
 			_, m, err := c.conn.ReadMessage()
 			ip, port := c.GetAddrPort()
 			if err != nil {
-				log.Default().Printf("websocket error: %s, from %s:%d", err, ip, port)
+				c.Logger.Errorf("websocket error: %s, from %s:%d", err, ip, port)
 				if c.running.Load() != false {
 					c.quit <- true
 				}
@@ -414,7 +414,7 @@ func (c *Conn) run() {
 			}
 			c.read <- m
 		}
-		log.Default().Printf("websocket is stop, state: %v", c.running.Load())
+		c.Logger.Infof("websocket is stop, state: %v", c.running.Load())
 	}()
 
 	defer func() {
@@ -424,7 +424,7 @@ func (c *Conn) run() {
 		// handle all the pending received messages
 		err := flushChannel(c.read, handleReceivedMessage)
 		if err != nil {
-			log.Default().Println(err)
+			c.Logger.Error(err)
 		}
 
 		for _, l := range c.cloneEventHandlers() {
@@ -448,28 +448,28 @@ func (c *Conn) run() {
 	for {
 		select {
 		case <-c.quit:
-			log.Default().Println("websocket quit")
+			c.Logger.Info("websocket quit")
 			return
 		case m := <-c.read:
 			go func() {
 				err := handleReceivedMessage(m)
 				if err != nil {
-					log.Default().Printf("Handle received message error: %s", err)
+					c.Logger.Errorf("Handle received message error: %s", err)
 				}
 			}()
 		case m := <-c.send:
 			if err := c.write(m); err != nil {
-				log.Default().Printf("Error while sending message to %+v: %s", c, err)
+				c.Logger.Errorf("Error while sending message to %+v: %s", c, err)
 				return
 			}
 		case <-c.flush:
 			if err := flushChannel(c.send, c.write); err != nil {
-				log.Default().Printf("Error while flushing send queue for %+v: %s", c, err)
+				c.Logger.Errorf("Error while flushing send queue for %+v: %s", c, err)
 				return
 			}
 		case <-c.pingTicker.C:
 			if err := c.sendPing(); err != nil {
-				log.Default().Printf("Error while sending ping to %+v: %s", c, err)
+				c.Logger.Errorf("Error while sending ping to %+v: %s", c, err)
 
 				// stop the ticker and request a quit
 				c.pingTicker.Stop()
@@ -502,6 +502,7 @@ func newConn(host string, clientProtocol Protocol, url *url.URL, headers http.He
 		quit:             make(chan bool, 2),
 		pingTicker:       &time.Ticker{},
 		writeCompression: true,
+		Logger:           NewStdLogger(),
 	}
 
 	if clientProtocol == JSONProtocol {

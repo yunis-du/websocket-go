@@ -2,7 +2,6 @@ package websocket
 
 import (
 	"errors"
-	"log"
 	"math/rand"
 	"reflect"
 	"time"
@@ -25,6 +24,7 @@ type Pool struct {
 	eventHandlers     []SpeakerEventHandler
 	eventHandlersLock RWMutex
 	speakers          []Speaker
+	Logger            Logger
 }
 
 func (s *Pool) CloneEventHandlers() (handlers []SpeakerEventHandler) {
@@ -139,7 +139,7 @@ func (s *Pool) BroadcastMessage(m Message) {
 
 	for _, c := range s.speakers {
 		if err := c.SendMessage(m); err != nil {
-			log.Default().Printf("Unable to send message from pool %s to %s: %s", s.name, c.GetRemoteHost(), err)
+			s.Logger.Errorf("Unable to send message from pool %s to %s: %s", s.name, c.GetRemoteHost(), err)
 		}
 	}
 }
@@ -232,7 +232,8 @@ func (s *ClientPool) ConnectAll() {
 
 func newPool(name string) *Pool {
 	return &Pool{
-		name: name,
+		name:   name,
+		Logger: NewStdLogger(),
 	}
 }
 

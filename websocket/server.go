@@ -3,7 +3,6 @@ package websocket
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -24,6 +23,7 @@ type Server struct {
 	*incomerPool
 	httpSrv        *HtpServer
 	incomerHandler IncomerHandler
+	Logger         Logger
 }
 
 func (s *Server) serverMessage(w http.ResponseWriter, r *http.Request) {
@@ -41,12 +41,12 @@ func (s *Server) serverMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Default().Printf("upgrade: %s", err)
+		s.Logger.Errorf("upgrade: %s", err)
 		return
 	}
 	_, err = s.incomerHandler(conn, r, func(c *wsIncomingClient) (Speaker, error) { return c, nil })
 	if err != nil {
-		log.Default().Printf("Unable to accept incomer from %s: %s", r.RemoteAddr, err)
+		s.Logger.Errorf("Unable to accept incomer from %s: %s", r.RemoteAddr, err)
 		w.Header().Set("Connection", "close")
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
@@ -55,7 +55,7 @@ func (s *Server) serverMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) newIncomingClient(conn *websocket.Conn, r *http.Request, promoter clientPromoter) (Speaker, error) {
-	log.Default().Printf("New WebSocket Connection from %s : URI path %s", conn.RemoteAddr().String(), r.URL.Path)
+	s.Logger.Infof("New WebSocket Connection from %s : URI path %s", conn.RemoteAddr().String(), r.URL.Path)
 
 	var clientProtocol Protocol
 	if err := clientProtocol.parse(getRequestParameter(r, "X-Client-Protocol")); err != nil {
@@ -67,6 +67,7 @@ func (s *Server) newIncomingClient(conn *websocket.Conn, r *http.Request, promot
 	wsConn := newConn(s.httpSrv.Host, clientProtocol, ur, r.Header)
 	wsConn.conn = conn
 	wsConn.RemoteHost = getRequestParameter(r, "X-Host-ID")
+	wsConn.Logger = s.Logger
 
 	// NOTE(safchain): fallback to remote addr if host id not provided
 	// should be removed, connection should be refused if host id not provided
@@ -154,7 +155,10 @@ func NewServer(hostname, addr string, port int, endpoint string) *Server {
 	s := &Server{
 		incomerPool: newIncomerPool(endpoint), // server inherits from a Speaker pool
 		httpSrv:     httpSrv,
+		Logger:      NewStdLogger(),
 	}
+	s.incomerPool.Logger = s.Logger
+	s.httpSrv.Logger = s.Logger
 	s.incomerHandler = func(conn *websocket.Conn, r *http.Request, promoter clientPromoter) (Speaker, error) {
 		return s.newIncomingClient(conn, r, promoter)
 	}
@@ -169,7 +173,10 @@ func NewServerWithListener(hostname string, listener net.Listener, endpoint stri
 	s := &Server{
 		incomerPool: newIncomerPool(endpoint), // server inherits from a Speaker pool
 		httpSrv:     httpServer,
+		Logger:      NewStdLogger(),
 	}
+	s.incomerPool.Logger = s.Logger
+	s.httpSrv.Logger = s.Logger
 	s.incomerHandler = func(conn *websocket.Conn, r *http.Request, promoter clientPromoter) (Speaker, error) {
 		return s.newIncomingClient(conn, r, promoter)
 	}

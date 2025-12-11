@@ -3,7 +3,6 @@ package websocket
 import (
 	"crypto/tls"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -50,7 +49,7 @@ func (c *Client) Connect() error {
 		headers[k] = v
 	}
 
-	log.Default().Printf("Connecting to %s", endpoint)
+	c.Logger.Infof("Connecting to %s", endpoint)
 
 	d := websocket.Dialer{
 		Proxy:             http.ProxyFromEnvironment,
@@ -74,7 +73,7 @@ func (c *Client) Connect() error {
 
 	c.State.Store(RunningState)
 
-	log.Default().Printf("Connected to %s", endpoint)
+	c.Logger.Infof("Connected to %s", endpoint)
 
 	c.RemoteHost = resp.Header.Get("X-Host-ID")
 
@@ -102,7 +101,7 @@ func (c *Client) Start() {
 					c.wg.Wait()
 				}
 			} else {
-				log.Default().Println(err)
+				c.Logger.Error(err)
 			}
 			time.Sleep(5 * time.Second)
 		}

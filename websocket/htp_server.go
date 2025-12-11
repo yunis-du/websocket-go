@@ -2,7 +2,6 @@ package websocket
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"sync"
@@ -19,6 +18,7 @@ type HtpServer struct {
 	Port     int
 	listener net.Listener
 	wg       sync.WaitGroup
+	Logger   Logger
 }
 
 func (s *HtpServer) listen() error {
@@ -30,14 +30,14 @@ func (s *HtpServer) listen() error {
 		}
 
 		s.listener = ln
-		log.Default().Printf("Listening on socket %s:%d", s.Addr, s.Port)
+		s.Logger.Infof("Listening on socket %s:%d", s.Addr, s.Port)
 	}
 	return nil
 }
 
 func (s *HtpServer) listenAndServe() {
 	if err := s.listen(); err != nil {
-		log.Default().Println(err)
+		s.Logger.Error(err)
 	}
 	go s.serve()
 }
@@ -62,7 +62,7 @@ func (s *HtpServer) serve() {
 	if err == http.ErrServerClosed {
 		return
 	}
-	log.Default().Printf("Failed to serve on %s:%d: %s", s.Addr, s.Port, err)
+	s.Logger.Errorf("Failed to serve on %s:%d: %s", s.Addr, s.Port, err)
 }
 
 func (s *HtpServer) handleFunc(path string, f func(w http.ResponseWriter, r *http.Request)) {
@@ -89,6 +89,7 @@ func newHtpServer(host string, addr string, port int) *HtpServer {
 		Router: router,
 		Addr:   addr,
 		Port:   port,
+		Logger: NewStdLogger(),
 	}
 }
 
@@ -101,5 +102,6 @@ func newHtpServerWithListener(host string, listener net.Listener) *HtpServer {
 		Host:     host,
 		Router:   router,
 		listener: listener,
+		Logger:   NewStdLogger(),
 	}
 }
