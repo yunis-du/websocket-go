@@ -6,7 +6,6 @@ import (
 	"os"
 	"sync/atomic"
 
-	httpServer "github.com/yunis-du/websocket-go/http"
 	"github.com/yunis-du/websocket-go/websocket"
 )
 
@@ -36,10 +35,8 @@ func (h *loadBalancerHandler) OnDisconnected(c websocket.Speaker) {
 
 func main() {
 	hostname, _ := os.Hostname()
-	httpSrv := httpServer.NewServer(hostname, "0.0.0.0", 8080)
-	httpSrv.ListenAndServe()
 
-	wsServer := websocket.NewServer(httpSrv, "/ws/pool")
+	wsServer := websocket.NewServer(hostname, "0.0.0.0", 8080, "/ws/pool")
 	wsServer.AddEventHandler(&loadBalancerHandler{})
 	wsServer.Start()
 

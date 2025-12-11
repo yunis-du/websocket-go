@@ -4,14 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/yunis-du/websocket-go/common"
-	htp "github.com/yunis-du/websocket-go/http"
 )
 
 const maxMessageSize = 0
@@ -21,9 +20,9 @@ type clientPromoter func(c *wsIncomingClient) (Speaker, error)
 type IncomerHandler func(*websocket.Conn, *http.Request, clientPromoter) (Speaker, error)
 
 type Server struct {
-	common.RWMutex
+	RWMutex
 	*incomerPool
-	server         *htp.Server
+	httpSrv        *HtpServer
 	incomerHandler IncomerHandler
 }
 
@@ -65,7 +64,7 @@ func (s *Server) newIncomingClient(conn *websocket.Conn, r *http.Request, promot
 
 	ur, _ := url.Parse(fmt.Sprintf("http://%s%s", conn.RemoteAddr().String(), r.URL.Path+"?"+r.URL.RawQuery))
 
-	wsConn := newConn(s.server.Host, clientProtocol, ur, r.Header)
+	wsConn := newConn(s.httpSrv.Host, clientProtocol, ur, r.Header)
 	wsConn.conn = conn
 	wsConn.RemoteHost = getRequestParameter(r, "X-Host-ID")
 
@@ -85,7 +84,7 @@ func (s *Server) newIncomingClient(conn *websocket.Conn, r *http.Request, promot
 		return nil, err
 	}
 
-	c.State.Store(common.RunningState)
+	c.State.Store(RunningState)
 
 	// add the new Speaker to the server pool
 	s.AddClient(pc)
@@ -148,15 +147,33 @@ func (s *StructServer) OnDisconnected(c Speaker) {
 	}
 }
 
-func NewServer(server *htp.Server, endpoint string) *Server {
+func NewServer(hostname, addr string, port int, endpoint string) *Server {
+	httpSrv := newHtpServer(hostname, addr, port)
+	httpSrv.listenAndServe()
+
 	s := &Server{
 		incomerPool: newIncomerPool(endpoint), // server inherits from a Speaker pool
-		server:      server,
+		httpSrv:     httpSrv,
 	}
 	s.incomerHandler = func(conn *websocket.Conn, r *http.Request, promoter clientPromoter) (Speaker, error) {
 		return s.newIncomingClient(conn, r, promoter)
 	}
-	server.HandleFunc(endpoint, s.serverMessage)
+	httpSrv.handleFunc(endpoint, s.serverMessage)
+	return s
+}
+
+func NewServerWithListener(hostname string, listener net.Listener, endpoint string) *Server {
+	httpServer := newHtpServerWithListener(hostname, listener)
+	httpServer.listenAndServe()
+
+	s := &Server{
+		incomerPool: newIncomerPool(endpoint), // server inherits from a Speaker pool
+		httpSrv:     httpServer,
+	}
+	s.incomerHandler = func(conn *websocket.Conn, r *http.Request, promoter clientPromoter) (Speaker, error) {
+		return s.newIncomingClient(conn, r, promoter)
+	}
+	httpServer.handleFunc(endpoint, s.serverMessage)
 	return s
 }
 

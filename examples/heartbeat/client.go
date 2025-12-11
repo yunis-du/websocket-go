@@ -63,27 +63,24 @@ func main() {
 	sentCount := 0
 	startTime := time.Now()
 
-	for {
-		select {
-		case <-ticker.C:
-			if !wsClient.IsConnected() {
-				log.Println("Connection closed, stop sending heartbeat")
-				return
-			}
+	for range ticker.C {
+		if !wsClient.IsConnected() {
+			log.Println("Connection closed, stop sending heartbeat")
+			return
+		}
 
-			err := wsClient.SendRaw([]byte("heartbeat"))
-			if err != nil {
-				log.Printf("❌ Send heartbeat failed: %v", err)
-			} else {
-				sentCount++
-				elapsed := time.Since(startTime)
-				log.Printf("💓 Send heartbeat #%d (uptime: %v)", sentCount, elapsed.Round(time.Second))
-			}
+		err := wsClient.SendRaw([]byte("heartbeat"))
+		if err != nil {
+			log.Printf("❌ Send heartbeat failed: %v", err)
+		} else {
+			sentCount++
+			elapsed := time.Since(startTime)
+			log.Printf("💓 Send heartbeat #%d (uptime: %v)", sentCount, elapsed.Round(time.Second))
+		}
 
-			// Check heartbeat response timeout
-			if time.Since(handler.lastAck) > 20*time.Second {
-				log.Println("⚠️  Heartbeat response timeout, connection may be abnormal")
-			}
+		// Check heartbeat response timeout
+		if time.Since(handler.lastAck) > 20*time.Second {
+			log.Println("⚠️  Heartbeat response timeout, connection may be abnormal")
 		}
 	}
 }

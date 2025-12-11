@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/yunis-du/websocket-go/common"
 )
 
 type Client struct {
@@ -38,9 +37,9 @@ func (c *wsIncomingClient) upgradeToStructSpeaker() *StructSpeaker {
 	return s
 }
 
-func (c *Client) scheme() string {
-	return "ws://"
-}
+// func (c *Client) scheme() string {
+// 	return "ws://"
+// }
 
 func (c *Client) Connect() error {
 	var err error
@@ -73,7 +72,7 @@ func (c *Client) Connect() error {
 	c.conn.SetPingHandler(nil)
 	c.conn.EnableWriteCompression(c.writeCompression)
 
-	c.State.Store(common.RunningState)
+	c.State.Store(RunningState)
 
 	log.Default().Printf("Connected to %s", endpoint)
 

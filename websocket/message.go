@@ -1,9 +1,11 @@
 package websocket
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
+	"github.com/golang/protobuf/proto"
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/yunis-du/websocket-go/websocket/pb"
 )
@@ -35,6 +37,7 @@ func (m RawMessage) Bytes(protocol Protocol) ([]byte, error) {
 // StructMessage wraps pb.StructMessage and implements Message interface
 type StructMessage struct {
 	*pb.StructMessage
+	Value any
 }
 
 // Bytes returns the message bytes in the specified protocol format
@@ -43,6 +46,80 @@ func (g *StructMessage) Bytes(protocol Protocol) ([]byte, error) {
 		return g.ProtobufBytes()
 	}
 	return g.JSONBytes()
+}
+
+// ProtobufBytes returns the protobuf encoded bytes of the message
+func (m *StructMessage) ProtobufBytes() ([]byte, error) {
+	if obj, ok := m.Value.(proto.Message); ok {
+		m.Format = pb.Format_PROTOBUF
+
+		msgObj, err := proto.Marshal(obj)
+		if err != nil {
+			return nil, err
+		}
+		m.Obj = msgObj
+	} else {
+		// fallback to json
+		m.Format = pb.Format_JSON
+
+		msgObj, err := json.Marshal(m.Value)
+		if err != nil {
+			return nil, err
+		}
+		m.Obj = msgObj
+	}
+
+	return proto.Marshal(m.StructMessage)
+}
+
+// JSONBytes returns the JSON encoded bytes of the message
+func (m *StructMessage) JSONBytes() ([]byte, error) {
+	type StructMessageAlias pb.StructMessage
+	msg := struct {
+		*StructMessageAlias
+		Obj any `json:"obj"`
+	}{
+		StructMessageAlias: (*StructMessageAlias)(m.StructMessage),
+		Obj:                m.Value,
+	}
+
+	return json.Marshal(msg)
+}
+
+// Unmarshal decodes the message based on the protocol
+func (m *StructMessage) Unmarshal(data []byte, protocol Protocol) error {
+	if protocol == ProtobufProtocol {
+		if m.StructMessage == nil {
+			m.StructMessage = &pb.StructMessage{}
+		}
+		return proto.Unmarshal(data, m.StructMessage)
+	}
+
+	// JSON
+	msg := struct {
+		Namespace string          `json:"namespace"`
+		Type      string          `json:"type"`
+		Uuid      string          `json:"uuid"`
+		Status    int64           `json:"status"`
+		Format    pb.Format       `json:"format"`
+		Obj       json.RawMessage `json:"obj"`
+	}{}
+
+	if err := json.Unmarshal(data, &msg); err != nil {
+		return err
+	}
+
+	if m.StructMessage == nil {
+		m.StructMessage = &pb.StructMessage{}
+	}
+	m.Namespace = msg.Namespace
+	m.Type = msg.Type
+	m.Uuid = msg.Uuid
+	m.Status = msg.Status
+	m.Format = msg.Format
+	m.Obj = []byte(msg.Obj)
+
+	return nil
 }
 
 func (p *Protocol) parse(s string) error {
@@ -83,10 +160,13 @@ func NewStructMessage(ns string, tp string, v any, uuids ...string) *StructMessa
 		Namespace: ns,
 		Type:      tp,
 		Uuid:      u,
-		UUID:      u,
 		Status:    int64(http.StatusOK),
 	}
-	pbMsg.SetValue(v)
 
-	return &StructMessage{StructMessage: pbMsg}
+	return &StructMessage{StructMessage: pbMsg, Value: v}
+}
+
+// Reply creates a reply message with the same Namespace and UUID
+func (m *StructMessage) Reply(v any, kind string, status int) *StructMessage {
+	return NewStructMessage(m.Namespace, kind, v, m.Uuid)
 }

@@ -1,4 +1,4 @@
-package common
+package websocket
 
 import (
 	"sync/atomic"

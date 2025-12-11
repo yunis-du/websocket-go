@@ -2,11 +2,6 @@ syntax = "proto3";
 
 package pb;
 
-import "gogoproto/gogo.proto";
-
-option (gogoproto.protosizer_all) = true;
-option (gogoproto.sizer_all) = false;
-
 enum Format {
   JSON = 0;
   PROTOBUF = 1;

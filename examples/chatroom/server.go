@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"sync"
 
-	"github.com/yunis-du/websocket-go/http"
 	"github.com/yunis-du/websocket-go/websocket"
 )
 
@@ -107,10 +107,14 @@ func (h *chatEventHandler) OnDisconnected(c websocket.Speaker) {
 
 func main() {
 	hostname, _ := os.Hostname()
-	httpServer := http.NewServer(hostname, "0.0.0.0", 8080)
-	httpServer.ListenAndServe()
 
-	wsServer := websocket.NewServer(httpServer, "/ws/chat")
+	listener, err := net.Listen("tcp", "0.0.0.0:8080")
+	if err != nil {
+		log.Printf("Failed to listen on 0.0.0.0:8080: %s", err)
+		return
+	}
+
+	wsServer := websocket.NewServerWithListener(hostname, listener, "/ws/chat")
 
 	// Create chatroom
 	room := NewChatRoom()

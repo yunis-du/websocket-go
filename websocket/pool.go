@@ -6,8 +6,6 @@ import (
 	"math/rand"
 	"reflect"
 	"time"
-
-	"github.com/yunis-du/websocket-go/common"
 )
 
 type SpeakerPool interface {
@@ -22,14 +20,14 @@ type SpeakerPool interface {
 }
 
 type Pool struct {
-	common.RWMutex
+	RWMutex
 	name              string
 	eventHandlers     []SpeakerEventHandler
-	eventHandlersLock common.RWMutex
+	eventHandlersLock RWMutex
 	speakers          []Speaker
 }
 
-func (s *Pool) cloneEventHandlers() (handlers []SpeakerEventHandler) {
+func (s *Pool) CloneEventHandlers() (handlers []SpeakerEventHandler) {
 	s.eventHandlersLock.RLock()
 	handlers = append(handlers, s.eventHandlers...)
 	s.eventHandlersLock.RUnlock()

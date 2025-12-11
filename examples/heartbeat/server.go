@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	httpServer "github.com/yunis-du/websocket-go/http"
 	"github.com/yunis-du/websocket-go/websocket"
 )
 
@@ -131,10 +130,8 @@ func (h *heartbeatHandler) OnDisconnected(c websocket.Speaker) {
 
 func main() {
 	hostname, _ := os.Hostname()
-	httpSrv := httpServer.NewServer(hostname, "0.0.0.0", 8080)
-	httpSrv.ListenAndServe()
 
-	wsServer := websocket.NewServer(httpSrv, "/ws/heartbeat")
+	wsServer := websocket.NewServer(hostname, "0.0.0.0", 8080, "/ws/heartbeat")
 
 	// Create monitor, timeout 15 seconds
 	monitor := NewClientMonitor(15 * time.Second)

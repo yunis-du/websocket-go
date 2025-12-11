@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	httpServer "github.com/yunis-du/websocket-go/http"
 	"github.com/yunis-du/websocket-go/websocket"
 )
 
@@ -124,10 +123,8 @@ func (s *NotificationService) OnDisconnected(c websocket.Speaker) {
 
 func main() {
 	hostname, _ := os.Hostname()
-	httpSrv := httpServer.NewServer(hostname, "0.0.0.0", 8080)
-	httpSrv.ListenAndServe()
 
-	wsServer := websocket.NewServer(httpSrv, "/ws/api")
+	wsServer := websocket.NewServer(hostname, "0.0.0.0", 8080, "/ws/api")
 	structServer := websocket.NewStructServer(wsServer)
 
 	// Register handlers for different namespaces

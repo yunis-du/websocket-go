@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/yunis-du/websocket-go/common"
-	"github.com/yunis-du/websocket-go/websocket/pb"
 )
 
 const writeWait = 60 * time.Second
@@ -60,9 +58,9 @@ func (d *DefaultSpeakerEventHandler) OnDisconnected(c Speaker) {
 
 type StructSpeaker struct {
 	Speaker
-	eventHandlersLock common.RWMutex
+	eventHandlersLock RWMutex
 	nsEventHandlers   map[string][]SpeakerStructMessageHandler
-	replyChanMutex    common.RWMutex
+	replyChanMutex    RWMutex
 	replyChan         map[string]chan *StructMessage
 }
 
@@ -83,11 +81,10 @@ func (s *StructSpeaker) OnMessage(c Speaker, m Message) {
 	if c, ok := c.(*StructSpeaker); ok {
 		bytes, _ := m.Bytes(RawProtocol)
 
-		pbMsg := &pb.StructMessage{}
-		if err := pbMsg.UnmarshalByProtocol(bytes, string(c.GetClientProtocol())); err != nil {
+		structMsg := &StructMessage{}
+		if err := structMsg.Unmarshal(bytes, c.GetClientProtocol()); err != nil {
 			return
 		}
-		structMsg := &StructMessage{StructMessage: pbMsg}
 		s.dispatchMessage(c, structMsg)
 	}
 }
@@ -111,7 +108,7 @@ func (s *StructSpeaker) OnDisconnected(c Speaker) {
 func (s *StructSpeaker) dispatchMessage(c Speaker, m *StructMessage) {
 	// Check if this is a reply to a pending request
 	s.replyChanMutex.RLock()
-	if ch, ok := s.replyChan[m.UUID]; ok {
+	if ch, ok := s.replyChan[m.Uuid]; ok {
 		s.replyChanMutex.RUnlock()
 		// Send reply to waiting channel
 		select {
@@ -138,12 +135,12 @@ func (s *StructSpeaker) Request(m *StructMessage, timeout time.Duration) (*Struc
 	ch := make(chan *StructMessage, 1)
 
 	s.replyChanMutex.Lock()
-	s.replyChan[m.UUID] = ch
+	s.replyChan[m.Uuid] = ch
 	s.replyChanMutex.Unlock()
 
 	defer func() {
 		s.replyChanMutex.Lock()
-		delete(s.replyChan, m.UUID)
+		delete(s.replyChan, m.Uuid)
 		close(ch)
 		s.replyChanMutex.Unlock()
 	}()
@@ -159,7 +156,7 @@ func (s *StructSpeaker) Request(m *StructMessage, timeout time.Duration) (*Struc
 }
 
 type structSpeakerPoolEventDispatcher struct {
-	eventHandlersLock common.RWMutex
+	eventHandlersLock RWMutex
 	nsEventHandlers   map[string][]SpeakerStructMessageHandler
 	pool              SpeakerPool
 }
@@ -184,7 +181,7 @@ func (a *structSpeakerPoolEventDispatcher) AddStructMessageHandler(h SpeakerStru
 	a.eventHandlersLock.Unlock()
 }
 
-func (a *structSpeakerPoolEventDispatcher) dispatchMessage(c *StructSpeaker, m *StructMessage) {
+func (a *structSpeakerPoolEventDispatcher) DispatchMessage(c *StructSpeaker, m *StructMessage) {
 	a.eventHandlersLock.RLock()
 	var handlers []SpeakerStructMessageHandler
 	handlers = append(handlers, a.nsEventHandlers[m.Namespace]...)
@@ -219,7 +216,7 @@ type ConnStatus struct {
 }
 
 type Conn struct {
-	common.RWMutex
+	RWMutex
 	ConnStatus
 	flush            chan struct{}
 	send             chan []byte
@@ -235,16 +232,16 @@ type Conn struct {
 	messageType      int
 }
 
-func (s *ConnState) CompareAndSwap(old, new common.ServiceState) bool {
+func (s *ConnState) CompareAndSwap(old, new ServiceState) bool {
 	return atomic.CompareAndSwapInt64((*int64)(s), int64(old), int64(new))
 }
 
-func (s *ConnState) Store(state common.ServiceState) {
-	(*common.ServiceState)(s).Store(state)
+func (s *ConnState) Store(state ServiceState) {
+	(*ServiceState)(s).Store(state)
 }
 
-func (s *ConnState) Load() common.ServiceState {
-	return (*common.ServiceState)(s).Load()
+func (s *ConnState) Load() ServiceState {
+	return (*ServiceState)(s).Load()
 }
 
 func (c *Conn) GetHost() string {
@@ -260,7 +257,7 @@ func (c *Conn) GetURL() *url.URL {
 }
 
 func (c *Conn) IsConnected() bool {
-	return c.State.Load() == common.RunningState
+	return c.State.Load() == RunningState
 }
 
 func (c *Conn) GetStatus() ConnStatus {
@@ -336,7 +333,7 @@ func (c *Conn) Flush() {
 
 func (c *Conn) Stop() {
 	c.running.Store(false)
-	if c.State.CompareAndSwap(common.RunningState, common.StoppingState) {
+	if c.State.CompareAndSwap(RunningState, StoppingState) {
 		c.quit <- true
 	}
 }
@@ -422,7 +419,7 @@ func (c *Conn) run() {
 
 	defer func() {
 		c.conn.Close()
-		c.State.Store(common.StoppedState)
+		c.State.Store(StoppedState)
 
 		// handle all the pending received messages
 		err := flushChannel(c.read, handleReceivedMessage)
@@ -513,7 +510,7 @@ func newConn(host string, clientProtocol Protocol, url *url.URL, headers http.He
 		c.messageType = websocket.BinaryMessage
 	}
 
-	c.State.Store(common.StoppedState)
+	c.State.Store(StoppedState)
 	c.running.Store(true)
 	return c
 }
