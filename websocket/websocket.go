@@ -406,7 +406,7 @@ func (c *Conn) run() {
 			_, m, err := c.conn.ReadMessage()
 			ip, port := c.GetAddrPort()
 			if err != nil {
-				c.Logger.Errorf("websocket error: %s, from %s:%d", err, ip, port)
+				c.Logger.Errorf("websocket conn [%s] error: %s, from %s:%d", c.conn.RemoteAddr().String(), err, ip, port)
 				if c.running.Load() != false {
 					c.quit <- true
 				}
@@ -414,7 +414,7 @@ func (c *Conn) run() {
 			}
 			c.read <- m
 		}
-		c.Logger.Infof("websocket is stop, state: %v", c.running.Load())
+		c.Logger.Debugf("websocket conn [%s] is stop, state: %v", c.conn.RemoteAddr().String(), c.running.Load())
 	}()
 
 	defer func() {
@@ -448,7 +448,7 @@ func (c *Conn) run() {
 	for {
 		select {
 		case <-c.quit:
-			c.Logger.Info("websocket quit")
+			c.Logger.Debugf("websocket conn [%s] quit", c.conn.RemoteAddr().String())
 			return
 		case m := <-c.read:
 			go func() {

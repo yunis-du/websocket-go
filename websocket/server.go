@@ -104,6 +104,12 @@ func (s *Server) newIncomingClient(conn *websocket.Conn, r *http.Request, promot
 	return c, nil
 }
 
+func (s *Server) SetLogger(l Logger) {
+	s.Logger = l
+	s.httpSrv.Logger = l
+	s.incomerPool.Logger = l
+}
+
 func getRequestParameter(r *http.Request, name string) string {
 	param := r.Header.Get(name)
 	if param == "" {
@@ -155,7 +161,7 @@ func NewServer(hostname, addr string, port int, endpoint string) *Server {
 	s := &Server{
 		incomerPool: newIncomerPool(endpoint), // server inherits from a Speaker pool
 		httpSrv:     httpSrv,
-		Logger:      NewStdLogger(),
+		Logger:      EmptyLogger(),
 	}
 	s.incomerPool.Logger = s.Logger
 	s.httpSrv.Logger = s.Logger
@@ -173,7 +179,7 @@ func NewServerWithListener(hostname string, listener net.Listener, endpoint stri
 	s := &Server{
 		incomerPool: newIncomerPool(endpoint), // server inherits from a Speaker pool
 		httpSrv:     httpServer,
-		Logger:      NewStdLogger(),
+		Logger:      EmptyLogger(),
 	}
 	s.incomerPool.Logger = s.Logger
 	s.httpSrv.Logger = s.Logger
